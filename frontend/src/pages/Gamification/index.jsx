@@ -4,8 +4,9 @@ import { TabBar } from "../Environmental/index.jsx";
 import GlassCard from "../../components/GlassCard.jsx";
 import StatusBadge from "../../components/StatusBadge.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import ProofUploader from "../../components/ProofUploader.jsx";
 
-const TABS = ["Challenges", "Badges", "Rewards", "Leaderboard"];
+const TABS = ["Challenges", "My Submissions", "Badges", "Rewards", "Kudos", "Leaderboard"];
 
 export default function Gamification() {
   const [tab, setTab] = useState("Challenges");
@@ -14,8 +15,10 @@ export default function Gamification() {
       <TabBar tabs={TABS} active={tab} onChange={setTab} />
       <div className="mt-4">
         {tab === "Challenges" && <Challenges />}
+        {tab === "My Submissions" && <MyChallengeSubmissions />}
         {tab === "Badges" && <Badges />}
         {tab === "Rewards" && <Rewards />}
+        {tab === "Kudos" && <Kudos />}
         {tab === "Leaderboard" && <Leaderboard />}
       </div>
     </div>
@@ -29,7 +32,7 @@ function Challenges() {
 
   async function join(id) {
     await api.post(`/challenges/${id}/join`);
-    alert("Joined! An admin will review your submission once you mark progress complete.");
+    alert("Joined! Go to the \"My Submissions\" tab to attach proof and track approval.");
   }
 
   return (
@@ -49,6 +52,42 @@ function Challenges() {
         </GlassCard>
       ))}
       {rows.length === 0 && <p className="text-slate-400 text-sm">No challenges yet.</p>}
+    </div>
+  );
+}
+
+// Same purpose as Social's MySubmissions: the only place an employee can
+// reach their own challenge participation rows and attach proof. The admin
+// list at GET /challenge-participation is admin-only.
+function MyChallengeSubmissions() {
+  const [rows, setRows] = useState([]);
+  const load = () => api.get("/challenge-participation/mine").then(({ data }) => setRows(data)).catch(() => {});
+  useEffect(load, []);
+
+  if (rows.length === 0) {
+    return <p className="text-slate-400 text-sm">You haven't joined any challenges yet — do that from the "Challenges" tab.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((r) => (
+        <GlassCard key={r.id} className="flex items-center justify-between">
+          <div>
+            <p className="font-medium">{r.challengeTitle}</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {r.evidenceRequired ? "Evidence required" : "Evidence optional"} · {r.xpAwarded ? `${r.xpAwarded} XP awarded` : "Pending review"}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <StatusBadge value={r.approvalStatus} />
+            <ProofUploader
+              endpoint={`/challenge-participation/${r.id}/proof`}
+              hasProof={!!r.proofUrl}
+              onUploaded={load}
+            />
+          </div>
+        </GlassCard>
+      ))}
     </div>
   );
 }
@@ -109,6 +148,88 @@ function Rewards() {
           </GlassCard>
         ))}
       </div>
+    </div>
+  );
+}
+
+// v3 fix: backend (/kudos, /kudos/feed) existed with no way to reach it —
+// this tab is the fix. /employees/directory (also added in v3) is the only
+// employee-list endpoint a non-admin can call, since GET /employees is
+// admin-only and returns full records this picker doesn't need.
+function Kudos() {
+  const { employee } = useAuth();
+  const [directory, setDirectory] = useState([]);
+  const [feed, setFeed] = useState([]);
+  const [toEmployeeId, setToEmployeeId] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const load = () => {
+    api.get("/employees/directory").then(({ data }) => setDirectory(data)).catch(() => {});
+    api.get("/kudos/feed").then(({ data }) => setFeed(data)).catch(() => {});
+  };
+  useEffect(load, []);
+
+  const nameOf = (id) => directory.find((d) => d.id === id)?.name ?? `#${id}`;
+  const colleagues = directory.filter((d) => d.id !== employee?.id);
+
+  async function send(e) {
+    e.preventDefault();
+    setError("");
+    if (!toEmployeeId) { setError("Pick a colleague first."); return; }
+    if (!message.trim()) { setError("Say what it's for."); return; }
+    setSending(true);
+    try {
+      await api.post("/kudos", { toEmployeeId: Number(toEmployeeId), message: message.trim() });
+      setToEmployeeId("");
+      setMessage("");
+      load();
+    } catch (err) {
+      setError(err.response?.data?.error ?? "Couldn't send kudos.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <GlassCard>
+        <h3 className="font-semibold mb-3">Give kudos</h3>
+        <form onSubmit={send} className="space-y-3">
+          <select
+            className="input" value={toEmployeeId}
+            onChange={(e) => setToEmployeeId(e.target.value)}
+          >
+            <option value="">Pick a colleague...</option>
+            {colleagues.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          <textarea
+            rows={3} maxLength={200} value={message} onChange={(e) => setMessage(e.target.value)}
+            className="input resize-none" placeholder="What did they do? (max 200 chars)"
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            type="submit" disabled={sending}
+            className="bg-esg-social text-white text-sm font-medium py-2 rounded-lg w-full disabled:opacity-50"
+          >
+            {sending ? "Sending..." : "Send kudos (+5 pts)"}
+          </button>
+        </form>
+      </GlassCard>
+
+      <GlassCard>
+        <h3 className="font-semibold mb-3">Recent kudos</h3>
+        <div className="space-y-3 max-h-80 overflow-y-auto">
+          {feed.map((k) => (
+            <div key={k.id} className="text-sm border-b border-surface-border last:border-0 pb-2">
+              <p><span className="font-medium">{nameOf(k.fromEmployeeId)}</span> → <span className="font-medium">{nameOf(k.toEmployeeId)}</span></p>
+              <p className="text-slate-500 text-xs mt-0.5">{k.message}</p>
+            </div>
+          ))}
+          {feed.length === 0 && <p className="text-slate-400 text-sm">No kudos given yet.</p>}
+        </div>
+      </GlassCard>
     </div>
   );
 }

@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-surface text-slate-800 font-body;
+}
+h1, h2, h3, h4 {
+  @apply font-display;
+}
+
+/* Glass: used on nav, sidebar, modals, KPI tiles, cards — anywhere legibility
+   isn't threatened by a busy background behind it. */
+.glass {
+  @apply bg-white/60 backdrop-blur-glass border border-surface-border shadow-glass;
+}
+
+/* Solid: used on every data table, per the design-system decision to keep
+   dense tabular data fully opaque so it stays legible at the wireframe's
+   row-density (Environmental Goals, Compliance Issues, etc.) */
+.solid-surface {
+  @apply bg-white border border-surface-border shadow-sm;
+}
+
+/* Visible keyboard focus ring on every interactive element — not just mouse
+   hover states. */
+:focus-visible {
+  outline: 2px solid #2E9E5B;
+  outline-offset: 2px;
+}
+
+/* Shared form-field style, referenced by every Create/Edit modal form
+   (Goals.jsx and its replicated siblings) so inputs look identical without
+   repeating the Tailwind class list in every file. */
+.input {
+  @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-esg-env;
+}
