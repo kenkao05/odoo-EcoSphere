@@ -8,6 +8,7 @@ import { requireAuth, requireAdmin, type AuthedRequest } from "../middleware/aut
 import { challengeInsert, challengeUpdate, kudosInsert } from "../lib/validation";
 import { notify } from "../lib/socket";
 import { checkAndAwardBadges } from "../lib/badgeEngine";
+import { upload, toPublicUrl, handleUploadError } from "../middleware/upload";
 
 const router = Router();
 
@@ -38,8 +39,52 @@ router.post("/challenges/:id/join", requireAuth, async (req: AuthedRequest, res)
   res.status(201).json(row);
 });
 
+/* ---- Attach proof to a challenge submission ----
+   Same real multer flow as social.ts's CSR proof endpoint -- this route
+   previously did not exist at all, so evidenceRequired challenges had no
+   way to actually receive evidence. */
+router.put(
+  "/challenge-participation/:id/proof",
+  requireAuth,
+  upload.single("file"),
+  handleUploadError,
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "A file is required (field name: file)" });
+
+    const [existing] = await db.select().from(challengeParticipation)
+      .where(eq(challengeParticipation.id, Number(req.params.id)));
+    if (!existing) return res.status(404).json({ error: "Participation record not found" });
+
+    const [row] = await db.update(challengeParticipation)
+      .set({ proofUrl: toPublicUrl(req.file.filename) })
+      .where(eq(challengeParticipation.id, existing.id))
+      .returning();
+    res.json(row);
+  },
+);
+
 router.get("/challenge-participation", requireAuth, requireAdmin, async (_req, res) => {
   res.json(await db.select().from(challengeParticipation));
+});
+
+// Employee-scoped view, same reasoning as social.ts's /participation/mine —
+// an employee needs their own participation row IDs to attach proof to.
+router.get("/challenge-participation/mine", requireAuth, async (req: AuthedRequest, res) => {
+  const rows = await db
+    .select({
+      id: challengeParticipation.id,
+      challengeId: challengeParticipation.challengeId,
+      challengeTitle: challenges.title,
+      evidenceRequired: challenges.evidenceRequired,
+      proofUrl: challengeParticipation.proofUrl,
+      progress: challengeParticipation.progress,
+      approvalStatus: challengeParticipation.approvalStatus,
+      xpAwarded: challengeParticipation.xpAwarded,
+    })
+    .from(challengeParticipation)
+    .leftJoin(challenges, eq(challengeParticipation.challengeId, challenges.id))
+    .where(eq(challengeParticipation.employeeId, req.user!.id));
+  res.json(rows);
 });
 
 // Approving a challenge: awards XP, updates employee.xpTotal, then runs the
@@ -54,6 +99,14 @@ router.put("/challenge-participation/:id/decision", requireAuth, requireAdmin, a
   if (!participation) return res.status(404).json({ error: "Not found" });
 
   const [challenge] = await db.select().from(challenges).where(eq(challenges.id, participation.challengeId));
+
+  // Same "not optional" rule as CSR activities (PDF Section 8): a challenge
+  // flagged evidenceRequired cannot be approved without an attached proof
+  // file. This check was previously missing from this endpoint entirely.
+  if (decision === "approved" && challenge.evidenceRequired && !participation.proofUrl) {
+    return res.status(422).json({ error: "This challenge requires proof before it can be approved" });
+  }
+
   const xpAwarded = decision === "approved" ? challenge.xp : 0;
 
   const [row] = await db.update(challengeParticipation)

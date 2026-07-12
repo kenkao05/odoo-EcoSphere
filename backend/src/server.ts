@@ -4,6 +4,7 @@ import cors from "cors";
 import http from "http";
 import { initSocket } from "./lib/socket";
 import { flagOverdueIssues } from "./routes/complianceIssues";
+import { UPLOAD_DIR } from "./middleware/upload";
 
 import authRouter from "./routes/auth";
 import employeesRouter from "./routes/employees";
@@ -26,6 +27,15 @@ app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// Serves whatever multer saved to backend/uploads/ (see middleware/upload.ts).
+// KNOWN LIMITATION: on Railway (and most PaaS free tiers) the filesystem is
+// ephemeral -- a redeploy wipes this directory. Fine for a live demo where
+// you seed + upload fresh each time; not durable storage. If that becomes a
+// real problem, swap multer's diskStorage for an S3-compatible bucket
+// (Cloudflare R2 free tier is a drop-in multer-s3 swap) -- flagged here
+// rather than silently letting evidence disappear on your next deploy.
+app.use("/uploads", express.static(UPLOAD_DIR));
 
 app.use("/api/auth", authRouter);
 app.use("/api/employees", employeesRouter);

@@ -8,6 +8,7 @@ import { requireAuth, requireAdmin, type AuthedRequest } from "../middleware/aut
 import { csrActivityInsert, csrActivityUpdate } from "../lib/validation";
 import { notify } from "../lib/socket";
 import { recalculateDepartmentScore } from "../lib/scoring";
+import { upload, toPublicUrl, handleUploadError } from "../middleware/upload";
 
 const router = Router();
 
@@ -32,20 +33,56 @@ router.post("/csr-activities/:id/join", requireAuth, async (req: AuthedRequest, 
   res.status(201).json(row);
 });
 
-/* ---- Employee (or admin on their behalf) attaches proof ---- */
-router.put("/participation/:id/proof", requireAuth, async (req, res) => {
-  const { proofUrl } = req.body ?? {};
-  if (!proofUrl) return res.status(400).json({ error: "proofUrl is required" });
-  const [row] = await db.update(employeeParticipation)
-    .set({ proofUrl })
-    .where(eq(employeeParticipation.id, Number(req.params.id)))
-    .returning();
-  res.json(row);
-});
+/* ---- Employee (or admin on their behalf) attaches proof ----
+   Real file upload via multer, local disk storage (see middleware/upload.ts).
+   Frontend sends multipart/form-data with a single field named "file";
+   this stores it under backend/uploads/ and writes the served path back
+   onto the participation row. handleUploadError catches wrong-type/too-large
+   before it ever reaches this handler. */
+router.put(
+  "/participation/:id/proof",
+  requireAuth,
+  upload.single("file"),
+  handleUploadError,
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "A file is required (field name: file)" });
+
+    const [existing] = await db.select().from(employeeParticipation)
+      .where(eq(employeeParticipation.id, Number(req.params.id)));
+    if (!existing) return res.status(404).json({ error: "Participation record not found" });
+
+    const [row] = await db.update(employeeParticipation)
+      .set({ proofUrl: toPublicUrl(req.file.filename) })
+      .where(eq(employeeParticipation.id, existing.id))
+      .returning();
+    res.json(row);
+  },
+);
 
 /* ---- Admin approval queue ---- */
 router.get("/participation", requireAuth, requireAdmin, async (_req, res) => {
   res.json(await db.select().from(employeeParticipation));
+});
+
+// Employee-scoped view of their own submissions. Without this, an employee
+// has no way to discover the participation row ID they need to PUT proof
+// against — /participation above is admin-only. Joins in the activity title
+// so the frontend doesn't need a second lookup per row.
+router.get("/participation/mine", requireAuth, async (req: AuthedRequest, res) => {
+  const rows = await db
+    .select({
+      id: employeeParticipation.id,
+      csrActivityId: employeeParticipation.csrActivityId,
+      activityTitle: csrActivities.name,
+      evidenceRequired: csrActivities.evidenceRequired,
+      proofUrl: employeeParticipation.proofUrl,
+      approvalStatus: employeeParticipation.approvalStatus,
+      pointsEarned: employeeParticipation.pointsEarned,
+    })
+    .from(employeeParticipation)
+    .leftJoin(csrActivities, eq(employeeParticipation.csrActivityId, csrActivities.id))
+    .where(eq(employeeParticipation.employeeId, req.user!.id));
+  res.json(rows);
 });
 
 // PDF Section 8: "Evidence Requirement -- when enabled, participation cannot

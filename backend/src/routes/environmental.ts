@@ -16,24 +16,14 @@ router.get("/goals", requireAuth, async (_req, res) => {
 router.post("/goals", requireAuth, requireAdmin, async (req, res) => {
   const parsed = environmentalGoalInsert.safeParse(req.body);
   if (!parsed.success) return res.status(422).json({ error: parsed.error.flatten() });
-  const { targetCo2, currentCo2, ...rest } = parsed.data;
-  const [row] = await db.insert(environmentalGoals).values({
-    ...rest,
-    targetCo2: targetCo2.toString(),
-    ...(currentCo2 !== undefined && { currentCo2: currentCo2.toString() }),
-  }).returning();
+  const [row] = await db.insert(environmentalGoals).values(parsed.data).returning();
   await recalculateDepartmentScore(row.departmentId);
   res.status(201).json(row);
 });
 router.put("/goals/:id", requireAuth, requireAdmin, async (req, res) => {
   const parsed = environmentalGoalUpdate.safeParse(req.body);
   if (!parsed.success) return res.status(422).json({ error: parsed.error.flatten() });
-  const { targetCo2, currentCo2, ...rest } = parsed.data;
-  const [row] = await db.update(environmentalGoals).set({
-    ...rest,
-    ...(targetCo2 !== undefined && { targetCo2: targetCo2.toString() }),
-    ...(currentCo2 !== undefined && { currentCo2: currentCo2.toString() }),
-  })
+  const [row] = await db.update(environmentalGoals).set(parsed.data)
     .where(eq(environmentalGoals.id, Number(req.params.id))).returning();
   await recalculateDepartmentScore(row.departmentId);
   res.json(row);

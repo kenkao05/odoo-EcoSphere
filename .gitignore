@@ -13,14 +13,23 @@
 **/.env.local
 **/.env.*.local
 
-# Package managers
-**/pnpm-lock.yaml
-**/yarn.lock
-**/package-lock.json  # optional: keep if you want version lock
+# Multer evidence uploads (local disk storage — see backend/src/middleware/upload.ts)
+# Never commit user-submitted files, and Railway's filesystem is ephemeral anyway.
+backend/uploads/
 
-# Build outputs
-**/migrations/   # Drizzle migrations (optional - keep if team wants)
+# Lockfiles and migrations are intentionally NOT ignored — keep both tracked.
+# A 3-person team needs matching npm installs (package-lock.json) and a
+# shared source of truth for schema state (Drizzle migrations). If you
+# genuinely want to stop tracking migrations later, add the line
+# "**/migrations/" back in on its own — do not put the reasoning as a
+# trailing comment on the same line, git will silently ignore it.
+
+# Build outputs / caches
 **/coverage/
+**/.cache/
+**/.temp/
+**/*.tmp
+**/tmp/
 **/.vite/
 
 # IDE / Editor
@@ -30,23 +39,6 @@
 *.swo
 .DS_Store
 Thumbs.db
-
-# Temporary / cache files
-**/.cache/
-**/.temp/
-**/*.tmp
-**/tmp/
-
-# OS
-**/__pycache__/
-**/.pytest_cache/
-
-# Backend specific
-backend/dist/
-backend/migrations/   # Uncomment if you don't want to track migrations
-
-# Frontend specific
-frontend/dist/
 
 # Logs
 npm-debug.log*

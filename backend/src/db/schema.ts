@@ -298,7 +298,7 @@ export const whistleblowerReports = pgTable("whistleblower_reports", {
    ============================================================ */
 
 export const esgConfiguration = pgTable("esg_configuration", {
-  id: integer("id").primaryKey().default(1),
+  id: serial("id").primaryKey().default(1),
   environmentalWeight: numeric("environmental_weight", { precision: 4, scale: 2 }).default("40.00").notNull(),
   socialWeight: numeric("social_weight", { precision: 4, scale: 2 }).default("30.00").notNull(),
   governanceWeight: numeric("governance_weight", { precision: 4, scale: 2 }).default("30.00").notNull(),
@@ -308,7 +308,7 @@ export const esgConfiguration = pgTable("esg_configuration", {
 });
 
 export const notificationSettings = pgTable("notification_settings", {
-  id: integer("id").primaryKey().default(1),
+  id: serial("id").primaryKey().default(1),
   complianceAlerts: boolean("compliance_alerts").default(true).notNull(),
   approvalDecisions: boolean("approval_decisions").default(true).notNull(),
   policyReminders: boolean("policy_reminders").default(true).notNull(),
@@ -322,16 +322,6 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   department: one(departments, { fields: [employees.departmentId], references: [departments.id] }),
   participation: many(employeeParticipation),
   challengeParticipation: many(challengeParticipation),
-}));
-
-export const employeeParticipationRelations = relations(employeeParticipation, ({ one }) => ({
-  employee: one(employees, { fields: [employeeParticipation.employeeId], references: [employees.id] }),
-  csrActivity: one(csrActivities, { fields: [employeeParticipation.csrActivityId], references: [csrActivities.id] }),
-}));
-
-export const challengeParticipationRelations = relations(challengeParticipation, ({ one }) => ({
-  employee: one(employees, { fields: [challengeParticipation.employeeId], references: [employees.id] }),
-  challenge: one(challenges, { fields: [challengeParticipation.challengeId], references: [challenges.id] }),
 }));
 
 export const complianceIssuesRelations = relations(complianceIssues, ({ one }) => ({
