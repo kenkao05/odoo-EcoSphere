@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import {
@@ -44,7 +44,7 @@ router.put(
   requireAuth,
   upload.single("file"),
   handleUploadError,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     if (!req.file) return res.status(400).json({ error: "A file is required (field name: file)" });
 
     const [existing] = await db.select().from(employeeParticipation)

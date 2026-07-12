@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
@@ -8,13 +8,13 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 const router = Router();
 
 const configSchema = z.object({
-  environmentalWeight: z.number().min(0).max(100),
-  socialWeight: z.number().min(0).max(100),
-  governanceWeight: z.number().min(0).max(100),
+  environmentalWeight: z.number().min(0).max(100).transform((v) => v.toFixed(2)),
+  socialWeight: z.number().min(0).max(100).transform((v) => v.toFixed(2)),
+  governanceWeight: z.number().min(0).max(100).transform((v) => v.toFixed(2)),
   autoEmissionCalc: z.boolean(),
   evidenceRequiredForCsr: z.boolean(),
   autoAwardBadges: z.boolean(),
-}).refine((v) => Math.round(v.environmentalWeight + v.socialWeight + v.governanceWeight) === 100, {
+}).refine((v) => Math.round(Number(v.environmentalWeight) + Number(v.socialWeight) + Number(v.governanceWeight)) === 100, {
   message: "Environmental + Social + Governance weights must sum to 100",
 });
 

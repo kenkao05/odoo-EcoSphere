@@ -39,9 +39,9 @@ export const productEsgProfileUpdate = productEsgProfileInsert.partial();
 export const environmentalGoalInsert = z.object({
   name: z.string().min(1).max(150),
   departmentId: z.number().int().positive(),
-  targetCo2: z.number().positive(),
-  currentCo2: z.number().nonnegative().optional(),
-  deadline: z.string(), // ISO date
+  targetCo2: z.number().positive().transform((v) => v.toFixed(2)),
+  currentCo2: z.number().nonnegative().transform((v) => v.toFixed(2)).optional(),
+  deadline: z.string(),
   status: z.enum(["active", "on_track", "at_risk", "completed"]).optional(),
 });
 export const environmentalGoalUpdate = environmentalGoalInsert.partial();
