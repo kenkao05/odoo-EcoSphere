@@ -298,7 +298,7 @@ export const whistleblowerReports = pgTable("whistleblower_reports", {
    ============================================================ */
 
 export const esgConfiguration = pgTable("esg_configuration", {
-  id: serial("id").primaryKey().default(1),
+  id: integer("id").primaryKey().default(1),
   environmentalWeight: numeric("environmental_weight", { precision: 4, scale: 2 }).default("40.00").notNull(),
   socialWeight: numeric("social_weight", { precision: 4, scale: 2 }).default("30.00").notNull(),
   governanceWeight: numeric("governance_weight", { precision: 4, scale: 2 }).default("30.00").notNull(),
@@ -308,7 +308,7 @@ export const esgConfiguration = pgTable("esg_configuration", {
 });
 
 export const notificationSettings = pgTable("notification_settings", {
-  id: serial("id").primaryKey().default(1),
+  id: integer("id").primaryKey().default(1),
   complianceAlerts: boolean("compliance_alerts").default(true).notNull(),
   approvalDecisions: boolean("approval_decisions").default(true).notNull(),
   policyReminders: boolean("policy_reminders").default(true).notNull(),
