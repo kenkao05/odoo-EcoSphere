@@ -1,0 +1,392 @@
+/* ==========================================
+   1. GLOBAL RESETS & GENERAL THEME
+   ========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+/* --- App Layout Container --- */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.page-view {
+  width: 100%;
+}
+
+
+/* ==========================================
+   2. NAVBAR / HEADER STYLES
+   ========================================== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 50px;
+  background-color: #000000;
+  border-bottom: 1px solid #111111;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  font-size: 24px;
+  color: #ff6600; /* Bright orange theme logo */
+}
+
+.logo-text h1 {
+  font-size: 18px;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+.logo-text p {
+  font-size: 9px;
+  color: #888888;
+  letter-spacing: 1px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 25px;
+}
+
+.nav-link-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.nav-link-btn.active, .nav-link-btn:hover {
+  color: #ffcc00; /* Hover ya active hone par yellow color */
+}
+
+.nav-item {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  background-color: #333333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid #555555;
+}
+
+
+/* ==========================================
+   3. HERO BANNER MOUNTAIN SECTION (IMAGE 1)
+   ========================================== */
+.hero-banner-section {
+  background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1600');
+  background-size: cover;
+  background-position: center;
+  height: 480px;
+  position: relative;
+  width: 100%;
+}
+
+.hero-overlay {
+  background-color: rgba(0, 0, 0, 0.4); /* Dark shade layer over image */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-center-text {
+  text-align: center;
+  color: #ffffff;
+}
+
+.hero-center-text h4 {
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+}
+
+.hero-center-text h3 {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 6px;
+  margin-bottom: 5px;
+}
+
+.yellow-title-text {
+  color: #ffcc00;
+  font-size: 36px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.hero-center-text h2 {
+  font-size: 38px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin-top: 2px;
+}
+
+.breadcrumb {
+  margin-top: 20px;
+  font-size: 13px;
+}
+
+.bold-white {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.fade-gray {
+  color: #aaaaaa;
+}
+
+
+/* ==========================================
+   4. ABOUT GRID INFO BLOCK (IMAGE 1 BOTTOM)
+   ========================================== */
+.about-info-section {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 50px;
+  padding: 60px 80px;
+  background-color: #000000;
+}
+
+.info-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.small-tag {
+  color: #888888;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.main-headline h2 {
+  font-size: 26px;
+  font-weight: bold;
+  line-height: 1.3;
+  margin-bottom: 15px;
+}
+
+.get-started-link {
+  background: none;
+  border: none;
+  color: #ffffff;
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+}
+
+.column-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.column-title-wrapper h3 {
+  font-size: 18px;
+  text-transform: lowercase; /* Chote alphabets ke liye as per image */
+  font-weight: bold;
+}
+
+.yellow-dash-line {
+  width: 35px;
+  height: 3px;
+  background-color: #ffcc00;
+}
+
+.description-paragraph {
+  color: #cccccc;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.bold-footer-text {
+  font-weight: bold;
+  font-style: italic;
+  font-size: 14px;
+}
+
+
+/* ==========================================
+   5. HOME SERVICES & FEATURES GRID (IMAGE 2)
+   ========================================== */
+.home-features-section {
+  padding: 80px 80px;
+  background-color: #000000;
+  border-top: 1px solid #111111;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1.2fr;
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+.pink-main-text {
+  color: #ea60a0; /* Pure bright pink matching image 2 */
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.request-access-btn {
+  color: #dd3b3b;
+  font-size: 13px;
+  margin-top: 25px;
+}
+
+.feature-col-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.service-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pink-dash-line {
+  width: 35px;
+  height: 2px;
+  background-color: #ea60a0;
+}
+
+.service-list-item h3 {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.feature-col-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.blue-info-text {
+  color: #2b6cb0; /* Deep blue styling for service details */
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.italic-text {
+  font-style: italic;
+}
+
+
+/* ==========================================
+   6. PINK CTA CARD BANNER (IMAGE 2 BOTTOM)
+   ========================================== */
+.pink-cta-banner-card {
+  background-color: #ea60a0;
+  border-radius: 18px;
+  padding: 35px 45px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cta-mini-label {
+  font-size: 12px;
+  color: #ffffff;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.cta-banner-left h3 {
+  font-size: 20px;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.black-action-btn {
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  padding: 12px 26px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.black-action-btn:hover {
+  transform: scale(1.03); /* Hover karne par halka sa bada hoga */
+}
+
+
+/* ==========================================
+   7. RESPONSIVE MEDIA QUERIES (FOR MOBILE/TABLET)
+   ========================================== */
+@media (max-width: 992px) {
+  .about-info-section, .features-grid {
+    grid-template-columns: 1fr; /* Single column on small screens */
+    gap: 30px;
+  }
+  
+  .about-info-section, .home-features-section {
+    padding: 40px;
+  }
+  
+  .navbar {
+    padding: 15px 20px;
+  }
+
+  .pink-cta-banner-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+}
