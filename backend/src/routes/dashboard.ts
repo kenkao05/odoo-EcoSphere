@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "../db";
 import { notifications, departmentScores, departments, carbonTransactions } from "../db/schema";
 import { requireAuth, type AuthedRequest } from "../middleware/auth";
@@ -39,7 +39,7 @@ router.get("/summary", requireAuth, async (_req, res) => {
    labeling it "AI-powered" in the pitch would be the same overclaiming
    problem flagged for the Odoo features. Call it "Projected trend" in the UI. */
 router.get("/emissions-forecast", requireAuth, async (_req, res) => {
-  const rows = await db.execute<{ month: string; total: string }>(`
+  const rows = await db.execute<{ month: string; total: string }>(sql`
     select to_char(date_trunc('month', transaction_date), 'YYYY-MM') as month, sum(co2e_amount) as total
     from carbon_transactions
     where transaction_date >= (current_date - interval '6 months')

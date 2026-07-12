@@ -18,13 +18,13 @@ const router = Router();
 router.get("/diversity", requireAuth, requireAdmin, async (_req, res) => {
   const MIN_BUCKET = 5;
 
-  const genderRows = await db.execute<{ gender: string; count: string }>(`
+  const genderRows = await db.execute<{ gender: string; count: string }>(sql`
     select gender, count(*) from employees where gender is not null group by gender
   `);
-  const ageRows = await db.execute<{ age_band: string; count: string }>(`
+  const ageRows = await db.execute<{ age_band: string; count: string }>(sql`
     select age_band, count(*) from employees where age_band is not null group by age_band
   `);
-  const genderByDept = await db.execute<{ department_id: number; gender: string; count: string }>(`
+  const genderByDept = await db.execute<{ department_id: number; gender: string; count: string }>(sql`
     select department_id, gender, count(*) from employees
     where gender is not null and department_id is not null
     group by department_id, gender

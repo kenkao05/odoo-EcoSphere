@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "../db";
 import { carbonTransactions, emissionFactors, esgConfiguration, environmentalGoals } from "../db/schema";
 import { requireAuth, requireAdmin } from "../middleware/auth";
@@ -16,14 +16,24 @@ router.get("/goals", requireAuth, async (_req, res) => {
 router.post("/goals", requireAuth, requireAdmin, async (req, res) => {
   const parsed = environmentalGoalInsert.safeParse(req.body);
   if (!parsed.success) return res.status(422).json({ error: parsed.error.flatten() });
-  const [row] = await db.insert(environmentalGoals).values(parsed.data).returning();
+  const { targetCo2, currentCo2, ...rest } = parsed.data;
+  const [row] = await db.insert(environmentalGoals).values({
+    ...rest,
+    targetCo2: targetCo2.toString(),
+    ...(currentCo2 !== undefined && { currentCo2: currentCo2.toString() }),
+  }).returning();
   await recalculateDepartmentScore(row.departmentId);
   res.status(201).json(row);
 });
 router.put("/goals/:id", requireAuth, requireAdmin, async (req, res) => {
   const parsed = environmentalGoalUpdate.safeParse(req.body);
   if (!parsed.success) return res.status(422).json({ error: parsed.error.flatten() });
-  const [row] = await db.update(environmentalGoals).set(parsed.data)
+  const { targetCo2, currentCo2, ...rest } = parsed.data;
+  const [row] = await db.update(environmentalGoals).set({
+    ...rest,
+    ...(targetCo2 !== undefined && { targetCo2: targetCo2.toString() }),
+    ...(currentCo2 !== undefined && { currentCo2: currentCo2.toString() }),
+  })
     .where(eq(environmentalGoals.id, Number(req.params.id))).returning();
   await recalculateDepartmentScore(row.departmentId);
   res.json(row);
@@ -71,7 +81,7 @@ router.post("/carbon-transactions", requireAuth, async (req, res) => {
 
 /* ---- 12-month emissions trend, for the Dashboard chart + forecast line ---- */
 router.get("/emissions-trend", requireAuth, async (_req, res) => {
-  const rows = await db.execute<{ month: string; total: string }>(`
+  const rows = await db.execute<{ month: string; total: string }>(sql`
     select to_char(date_trunc('month', transaction_date), 'YYYY-MM') as month,
            sum(co2e_amount) as total
     from carbon_transactions

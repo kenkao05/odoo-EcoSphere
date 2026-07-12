@@ -26,7 +26,13 @@ router.get("/esg-configuration", requireAuth, async (_req, res) => {
 router.put("/esg-configuration", requireAuth, requireAdmin, async (req, res) => {
   const parsed = configSchema.safeParse(req.body);
   if (!parsed.success) return res.status(422).json({ error: parsed.error.flatten() });
-  const [row] = await db.update(esgConfiguration).set(parsed.data).where(eq(esgConfiguration.id, 1)).returning();
+  const { environmentalWeight, socialWeight, governanceWeight, ...rest } = parsed.data;
+  const [row] = await db.update(esgConfiguration).set({
+    ...rest,
+    environmentalWeight: environmentalWeight.toString(),
+    socialWeight: socialWeight.toString(),
+    governanceWeight: governanceWeight.toString(),
+  }).where(eq(esgConfiguration.id, 1)).returning();
   res.json(row);
 });
 

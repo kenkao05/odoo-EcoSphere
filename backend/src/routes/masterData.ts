@@ -1,4 +1,4 @@
-import { makeCrudRouter } from "./crudFactory";
+import { makeCrudRouter } from "../lib/crudFactory";
 import {
   departments, categories, emissionFactors, productEsgProfiles, esgPolicies, badges, rewards, audits,
 } from "../db/schema";
