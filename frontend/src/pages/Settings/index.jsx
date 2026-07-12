@@ -32,7 +32,14 @@ function Departments() {
   const [form, setForm] = useState(EMPTY_DEPT);
 
   const load = () => api.get("/departments").then(({ data }) => setRows(data)).catch(() => {});
-  useEffect(load, []);
+  // Same bug class as Social/Gamification: useEffect(load, []) handed React
+  // the Promise that load() returns (implicit-return arrow + chained
+  // .catch()), and React calls whatever an effect returns as its cleanup
+  // ("destroy") function on unmount — hence "destroy is not a function"
+  // locally, and the minified "n is not a function" in the Vercel build
+  // (same passive-effect-flush crash chain, just renamed by the minifier).
+  // This was the one instance missed in the earlier pass.
+  useEffect(() => { load(); }, []);
 
   function openNew() { setEditing(null); setForm(EMPTY_DEPT); setModalOpen(true); }
   function openEdit(row) { setEditing(row); setForm({ name: row.name, code: row.code, head: row.head ?? "" }); setModalOpen(true); }
