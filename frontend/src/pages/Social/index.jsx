@@ -32,7 +32,14 @@ export default function Social() {
 function MySubmissions() {
   const [rows, setRows] = useState([]);
   const load = () => api.get("/participation/mine").then(({ data }) => setRows(data)).catch(() => {});
-  useEffect(load, []);
+  // NOTE: useEffect(load, []) previously passed load's return value (a
+  // Promise, from the implicit-return arrow above) straight to useEffect,
+  // which React treats as a cleanup ("destroy") function. Wrapping in
+  // braces here throws that return value away so the effect returns
+  // undefined instead — that's what was crashing with "destroy is not a
+  // function" on unmount/remount (React 18 Strict Mode double-invokes
+  // effects in dev, which is why this fired even on first load).
+  useEffect(() => { load(); }, []);
 
   if (rows.length === 0) {
     return <p className="text-slate-400 text-sm">You haven't joined any CSR activities yet — do that from the "CSR Activities" tab.</p>;
@@ -65,7 +72,7 @@ function MySubmissions() {
 function CsrActivities() {
   const [activities, setActivities] = useState([]);
   const load = () => api.get("/csr-activities").then(({ data }) => setActivities(data)).catch(() => {});
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   async function join(id) {
     await api.post(`/csr-activities/${id}/join`);
@@ -94,7 +101,7 @@ function CsrActivities() {
 function ParticipationQueue() {
   const [rows, setRows] = useState([]);
   const load = () => api.get("/participation").then(({ data }) => setRows(data)).catch(() => {});
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   async function decide(id, decision) {
     try {

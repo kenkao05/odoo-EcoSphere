@@ -28,7 +28,12 @@ export default function Gamification() {
 function Challenges() {
   const [rows, setRows] = useState([]);
   const load = () => api.get("/challenges").then(({ data }) => setRows(data)).catch(() => {});
-  useEffect(load, []);
+  // NOTE: useEffect(load, []) previously handed React the Promise that
+  // load() returns (implicit-return arrow, then .catch() chained on top),
+  // and React tries to call whatever an effect returns as its cleanup
+  // ("destroy") function on unmount — hence "destroy is not a function".
+  // Wrapping in braces makes the effect return undefined instead.
+  useEffect(() => { load(); }, []);
 
   async function join(id) {
     await api.post(`/challenges/${id}/join`);
@@ -62,7 +67,7 @@ function Challenges() {
 function MyChallengeSubmissions() {
   const [rows, setRows] = useState([]);
   const load = () => api.get("/challenge-participation/mine").then(({ data }) => setRows(data)).catch(() => {});
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   if (rows.length === 0) {
     return <p className="text-slate-400 text-sm">You haven't joined any challenges yet — do that from the "Challenges" tab.</p>;
@@ -118,7 +123,7 @@ function Rewards() {
   const [rows, setRows] = useState([]);
   const { employee } = useAuth();
   const load = () => api.get("/rewards").then(({ data }) => setRows(data)).catch(() => {});
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   async function redeem(id) {
     try {
@@ -169,7 +174,7 @@ function Kudos() {
     api.get("/employees/directory").then(({ data }) => setDirectory(data)).catch(() => {});
     api.get("/kudos/feed").then(({ data }) => setFeed(data)).catch(() => {});
   };
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const nameOf = (id) => directory.find((d) => d.id === id)?.name ?? `#${id}`;
   const colleagues = directory.filter((d) => d.id !== employee?.id);
