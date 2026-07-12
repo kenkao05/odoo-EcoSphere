@@ -7,6 +7,49 @@ import { getOrgScores } from "../lib/scoring";
 
 const router = Router();
 
+/* ---- Recent Activity (v3) ----
+   The original wireframe's Dashboard has a "Recent Activity" feed (challenge
+   completions, compliance issues, carbon transactions, policy
+   acknowledgements) that v2 never built and never flagged as cut. This
+   unions the four most recent event types into one feed sorted by time,
+   read-only, capped at 10 rows -- deliberately simple (one UNION query, no
+   new table) rather than introducing a generic "activity log" table this
+   late, which would be new schema for a cosmetic feature. */
+router.get("/recent-activity", requireAuth, async (_req, res) => {
+  const rows = await db.execute<{ kind: string; label: string; happened_at: string }>(sql`
+    (select 'challenge_completed' as kind,
+            e.name || ' completed a challenge (+' || cp.xp_awarded || ' XP)' as label,
+            cp.id::text as happened_at
+     from challenge_participation cp
+     join employees e on e.id = cp.employee_id
+     where cp.approval_status = 'approved'
+     order by cp.id desc limit 5)
+    union all
+    (select 'compliance_issue' as kind,
+            'New compliance issue: ' || ci.title as label,
+            ci.created_at::text as happened_at
+     from compliance_issues ci
+     order by ci.created_at desc limit 5)
+    union all
+    (select 'carbon_transaction' as kind,
+            ct.co2e_amount || ' kg CO2e logged (' || ct.source_type || ')' as label,
+            ct.created_at::text as happened_at
+     from carbon_transactions ct
+     order by ct.created_at desc limit 5)
+    union all
+    (select 'policy_ack' as kind,
+            e.name || ' acknowledged "' || p.title || '"' as label,
+            pa.acknowledged_at::text as happened_at
+     from policy_acknowledgements pa
+     join employees e on e.id = pa.employee_id
+     join esg_policies p on p.id = pa.policy_id
+     where pa.acknowledged_at is not null
+     order by pa.acknowledged_at desc limit 5)
+    order by happened_at desc nulls last limit 10
+  `);
+  res.json(rows.rows);
+});
+
 router.get("/notifications", requireAuth, async (req: AuthedRequest, res) => {
   const rows = await db.select().from(notifications)
     .where(eq(notifications.employeeId, req.user!.id))

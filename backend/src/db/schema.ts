@@ -188,6 +188,13 @@ export const challengeParticipation = pgTable("challenge_participation", {
   proofUrl: varchar("proof_url", { length: 300 }),
   approvalStatus: approvalStatusEnum("approval_status").default("pending").notNull(),
   xpAwarded: integer("xp_awarded").default(0).notNull(),
+  // v3: needed so the Dashboard's Recent Activity feed can sort challenge
+  // completions chronologically against compliance issues / carbon
+  // transactions / policy acks, which all already had a real timestamp
+  // column. Without this there was nothing to sort by except the row's
+  // serial id, which doesn't interleave correctly with ISO timestamp
+  // strings from the other three event types in a UNION ORDER BY.
+  respondedAt: timestamp("responded_at"),
 });
 
 export const policyAcknowledgements = pgTable("policy_acknowledgements", {

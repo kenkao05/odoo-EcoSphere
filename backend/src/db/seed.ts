@@ -5,6 +5,7 @@ import {
   departments, categories, emissionFactors, employees, badges, rewards,
   esgPolicies, challenges, esgConfiguration, notificationSettings,
 } from "./schema";
+import { recalculateDepartmentScore } from "../lib/scoring";
 
 // Run once before the demo: `npm run seed`. Idempotent-ish (safe to re-run on
 // a fresh db); NOT safe to re-run against a db that already has this data,
@@ -65,6 +66,16 @@ async function seed() {
   // still needs an explicit insert once.
   await db.insert(esgConfiguration).values({});
   await db.insert(notificationSettings).values({});
+
+  // v3 fix: without this, department_scores has zero rows for the current
+  // period until some admin action triggers a recalc, which means the
+  // Dashboard's 4 KPI tiles and department ranking chart show all zeros the
+  // moment you log in right after seeding — the exact opposite of demo
+  // script step 1 ("show the Dashboard: 4 live KPI tiles"). Recalculating
+  // all three departments here means the dashboard is populated immediately.
+  await recalculateDepartmentScore(mfg.id);
+  await recalculateDepartmentScore(logi.id);
+  await recalculateDepartmentScore(corp.id);
 
   console.log("Seed complete. Demo logins:");
   console.log("  admin@ecosphere.demo / admin1234");

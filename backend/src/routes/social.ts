@@ -116,9 +116,16 @@ router.put("/participation/:id/decision", requireAuth, requireAdmin, async (req,
     .returning();
 
   if (decision === "approved") {
-    await db.update(employees)
-      .set({ pointsBalance: (await currentBalance(participation.employeeId)) + (points ?? 10) })
-      .where(eq(employees.id, participation.employeeId));
+    // v3 fix: was read-then-write via the currentBalance() helper below --
+    // same lost-update race fixed in gamification.ts's challenge-XP and
+    // kudos endpoints this version. currentBalance() is removed; the read
+    // now happens inside the transaction that also does the write.
+    await db.transaction(async (tx) => {
+      const [employee] = await tx.select().from(employees).where(eq(employees.id, participation.employeeId));
+      await tx.update(employees)
+        .set({ pointsBalance: employee.pointsBalance + (points ?? 10) })
+        .where(eq(employees.id, participation.employeeId));
+    });
   }
 
   await notify({
@@ -134,10 +141,5 @@ router.put("/participation/:id/decision", requireAuth, requireAdmin, async (req,
 
   res.json(row);
 });
-
-async function currentBalance(employeeId: number) {
-  const [e] = await db.select().from(employees).where(eq(employees.id, employeeId));
-  return e?.pointsBalance ?? 0;
-}
 
 export default router;

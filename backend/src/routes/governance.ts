@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../db";
 import { policyAcknowledgements, esgPolicies, employees } from "../db/schema";
 import { requireAuth, requireAdmin, type AuthedRequest } from "../middleware/auth";
@@ -33,8 +33,10 @@ router.get("/policy-acknowledgements", requireAuth, requireAdmin, async (_req, r
 // Employee-facing: policies THEY haven't acknowledged yet (drives a "Pending
 // Acknowledgement" banner/list on their view of Governance).
 router.get("/policy-acknowledgements/pending", requireAuth, async (req: AuthedRequest, res) => {
-  const acked = await db.select().from(policyAcknowledgements)
-    .where(and(eq(policyAcknowledgements.employeeId, req.user!.id), eq(policyAcknowledgements.acknowledgedAt as any, null)));
+  // v3: removed a dead `acked` variable that used eq(acknowledgedAt, null) --
+  // invalid as a null check in SQL (needs IS NULL, which is what isNull()
+  // generates) and never actually read anywhere. The query below was always
+  // the one doing real work.
   const ackedPolicyIds = new Set(
     (await db.select().from(policyAcknowledgements).where(eq(policyAcknowledgements.employeeId, req.user!.id)))
       .filter((a) => a.acknowledgedAt)

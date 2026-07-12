@@ -110,15 +110,26 @@ router.put("/challenge-participation/:id/decision", requireAuth, requireAdmin, a
   const xpAwarded = decision === "approved" ? challenge.xp : 0;
 
   const [row] = await db.update(challengeParticipation)
-    .set({ approvalStatus: decision, xpAwarded, progress: decision === "approved" ? 100 : participation.progress })
+    .set({
+      approvalStatus: decision, xpAwarded,
+      progress: decision === "approved" ? 100 : participation.progress,
+      respondedAt: new Date(), // v3: backs the Recent Activity feed's sort order
+    })
     .where(eq(challengeParticipation.id, participation.id))
     .returning();
 
   if (decision === "approved") {
-    const [employee] = await db.select().from(employees).where(eq(employees.id, participation.employeeId));
-    await db.update(employees)
-      .set({ xpTotal: employee.xpTotal + xpAwarded })
-      .where(eq(employees.id, participation.employeeId));
+    // v3 fix: was a plain read-then-write (select xpTotal, then update to
+    // xpTotal + xpAwarded) -- the same lost-update race that reward
+    // redemption was deliberately wrapped in a transaction to avoid,
+    // just left unfixed here. Two approvals landing close together for the
+    // same employee could silently drop one award. Now atomic.
+    await db.transaction(async (tx) => {
+      const [employee] = await tx.select().from(employees).where(eq(employees.id, participation.employeeId));
+      await tx.update(employees)
+        .set({ xpTotal: employee.xpTotal + xpAwarded })
+        .where(eq(employees.id, participation.employeeId));
+    });
     await checkAndAwardBadges(participation.employeeId);
   }
 
@@ -133,10 +144,18 @@ router.put("/challenge-participation/:id/decision", requireAuth, requireAdmin, a
   res.json(row);
 });
 
-/* ---- Leaderboard: XP ranking, optional department scope ("Eco-Wars") ---- */
+/* ---- Leaderboard: XP ranking, optional department scope ("Eco-Wars") ----
+   v3 fix: previously did .orderBy(xp desc).limit(50) across the WHOLE org,
+   then filtered to a department in JS afterward -- a department whose
+   members weren't in the org-wide top 50 could show incomplete or empty
+   results even with real XP. Department filter is now a SQL WHERE, applied
+   before ORDER BY/LIMIT, so a department-scoped query sees all of that
+   department's employees ranked among themselves, not a leftover slice of
+   an unrelated global ranking. */
 router.get("/leaderboard", requireAuth, async (req, res) => {
   const scope = req.query.department as string | undefined;
-  const rows = await db
+
+  const base = db
     .select({
       employeeId: employees.id,
       name: employees.name,
@@ -145,12 +164,13 @@ router.get("/leaderboard", requireAuth, async (req, res) => {
       xpTotal: employees.xpTotal,
     })
     .from(employees)
-    .leftJoin(departments, eq(employees.departmentId, departments.id))
-    .orderBy(desc(employees.xpTotal))
-    .limit(50);
+    .leftJoin(departments, eq(employees.departmentId, departments.id));
 
-  const filtered = scope ? rows.filter((r) => String(r.departmentId) === scope) : rows;
-  res.json(filtered.map((r, i) => ({ rank: i + 1, ...r })));
+  const rows = scope
+    ? await base.where(eq(employees.departmentId, Number(scope))).orderBy(desc(employees.xpTotal)).limit(50)
+    : await base.orderBy(desc(employees.xpTotal)).limit(50);
+
+  res.json(rows.map((r, i) => ({ rank: i + 1, ...r })));
 });
 
 /* ---- Rewards catalog + redemption (transactional: stock and points move together) ---- */
@@ -195,7 +215,10 @@ router.post("/rewards/:id/redeem", requireAuth, async (req: AuthedRequest, res) 
   }
 });
 
-/* ---- Kudos: peer-to-peer recognition, fixed 5pt amount, no admin approval ---- */
+/* ---- Kudos: peer-to-peer recognition, fixed 5pt amount, no admin approval ----
+   Frontend (added v3): "Kudos" tab in Gamification/index.jsx -- pick a
+   colleague, send a message, see the feed. v2 built this endpoint with no
+   way to reach it from the UI at all. */
 router.post("/kudos", requireAuth, async (req: AuthedRequest, res) => {
   const parsed = kudosInsert.safeParse(req.body);
   if (!parsed.success) return res.status(422).json({ error: parsed.error.flatten() });
@@ -203,14 +226,19 @@ router.post("/kudos", requireAuth, async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: "You can't give kudos to yourself" });
   }
 
-  const [row] = await db.insert(kudos).values({
-    fromEmployeeId: req.user!.id,
-    toEmployeeId: parsed.data.toEmployeeId,
-    message: parsed.data.message,
-  }).returning();
+  // v3 fix: points award is now atomic with the kudos row, same reasoning
+  // as the challenge-XP fix above -- was read-then-write before.
+  const row = await db.transaction(async (tx) => {
+    const [inserted] = await tx.insert(kudos).values({
+      fromEmployeeId: req.user!.id,
+      toEmployeeId: parsed.data.toEmployeeId,
+      message: parsed.data.message,
+    }).returning();
 
-  const [receiver] = await db.select().from(employees).where(eq(employees.id, parsed.data.toEmployeeId));
-  await db.update(employees).set({ pointsBalance: receiver.pointsBalance + 5 }).where(eq(employees.id, receiver.id));
+    const [receiver] = await tx.select().from(employees).where(eq(employees.id, parsed.data.toEmployeeId));
+    await tx.update(employees).set({ pointsBalance: receiver.pointsBalance + 5 }).where(eq(employees.id, receiver.id));
+    return inserted;
+  });
 
   await notify({
     employeeId: parsed.data.toEmployeeId,

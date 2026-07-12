@@ -1,4 +1,4 @@
-import { eq, and, sql, gte } from "drizzle-orm";
+import { eq, and, sql, gte, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
   departments, environmentalGoals, carbonTransactions, employeeParticipation,
@@ -36,7 +36,7 @@ export async function recalculateDepartmentScore(departmentId: number) {
         approved: sql<number>`count(*) filter (where ${employeeParticipation.approvalStatus} = 'approved')`,
       })
       .from(employeeParticipation)
-      .where(sql`${employeeParticipation.employeeId} = ANY(${employeeIds})`);
+      .where(inArray(employeeParticipation.employeeId, employeeIds));
     csrRate = Number(total) > 0 ? (Number(approved) / Number(total)) * 100 : 100;
   }
 
@@ -48,7 +48,7 @@ export async function recalculateDepartmentScore(departmentId: number) {
         acked: sql<number>`count(*) filter (where ${policyAcknowledgements.acknowledgedAt} is not null)`,
       })
       .from(policyAcknowledgements)
-      .where(sql`${policyAcknowledgements.employeeId} = ANY(${employeeIds})`);
+      .where(inArray(policyAcknowledgements.employeeId, employeeIds));
     ackRate = Number(total) > 0 ? (Number(acked) / Number(total)) * 100 : 100;
   }
   const socialScore = (csrRate + ackRate) / 2;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, lt, ne } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 import { db } from "../db";
 import { complianceIssues, audits } from "../db/schema";
 import { requireAuth, requireAdmin, type AuthedRequest } from "../middleware/auth";
