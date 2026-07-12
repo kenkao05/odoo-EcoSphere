@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS "environmental_goals" (
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "esg_configuration" (
-	"id" serial PRIMARY KEY DEFAULT 1 NOT NULL,
+	"id" integer PRIMARY KEY DEFAULT 1 NOT NULL,
 	"environmental_weight" numeric(4, 2) DEFAULT '40.00' NOT NULL,
 	"social_weight" numeric(4, 2) DEFAULT '30.00' NOT NULL,
 	"governance_weight" numeric(4, 2) DEFAULT '30.00' NOT NULL,
@@ -259,7 +259,7 @@ CREATE TABLE IF NOT EXISTS "kudos" (
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notification_settings" (
-	"id" serial PRIMARY KEY DEFAULT 1 NOT NULL,
+	"id" integer PRIMARY KEY DEFAULT 1 NOT NULL,
 	"compliance_alerts" boolean DEFAULT true NOT NULL,
 	"approval_decisions" boolean DEFAULT true NOT NULL,
 	"policy_reminders" boolean DEFAULT true NOT NULL,

@@ -324,6 +324,16 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   challengeParticipation: many(challengeParticipation),
 }));
 
+export const employeeParticipationRelations = relations(employeeParticipation, ({ one }) => ({
+  employee: one(employees, { fields: [employeeParticipation.employeeId], references: [employees.id] }),
+  csrActivity: one(csrActivities, { fields: [employeeParticipation.csrActivityId], references: [csrActivities.id] }),
+}));
+
+export const challengeParticipationRelations = relations(challengeParticipation, ({ one }) => ({
+  employee: one(employees, { fields: [challengeParticipation.employeeId], references: [employees.id] }),
+  challenge: one(challenges, { fields: [challengeParticipation.challengeId], references: [challenges.id] }),
+}));
+
 export const complianceIssuesRelations = relations(complianceIssues, ({ one }) => ({
   owner: one(employees, { fields: [complianceIssues.ownerId], references: [employees.id] }),
   department: one(departments, { fields: [complianceIssues.departmentId], references: [departments.id] }),
